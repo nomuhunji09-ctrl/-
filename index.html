@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 검색기 Dual v2</title>
+    <title>끝말잇기 마스터 검색기 Dual v5</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -10,7 +10,7 @@
             background-color: #ffffff;
         }
         .container {
-            max-width: 700px; /* 양옆으로 넓히기 위해 크기를 키웠습니다 */
+            max-width: 720px;
             margin: 30px auto;
         }
         .search-box {
@@ -28,7 +28,7 @@
             font-weight: bold;
         }
         
-        /* [핵심 변형] 양옆으로 갈라지는 레이아웃 */
+        /* 양옆 분할 레이아웃 */
         .result-wrapper {
             display: flex;
             gap: 15px;
@@ -54,7 +54,7 @@
         .column-title.attack { color: #fff; background: #eb5757; }
         
         .list-content {
-            max-height: 350px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .autocomplete-item {
@@ -91,7 +91,7 @@
         }
         textarea {
             width: 100%;
-            height: 100px;
+            height: 150px;
             box-sizing: border-box;
             padding: 8px;
             font-size: 13px;
@@ -113,17 +113,21 @@
         }
         .btn:hover { background: #111; }
         
-        /* 맨 밑에 요청하신 요소 추가 */
+        /* 하단 고정 요소 - 이미지 전용 배너 */
         .footer-banner {
             margin-top: 50px;
             text-align: center;
-            font-size: 16px;
-            font-weight: bold;
-            color: #444;
-            padding: 20px;
+            padding: 15px;
             border-top: 1px solid #eee;
             background: #f9f9f9;
             border-radius: 6px;
+        }
+        .footer-banner img {
+            max-width: 100%;
+            height: auto;
+            max-height: 250px; /* 너무 크지 않게 적당히 조절 */
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .toast {
@@ -144,7 +148,7 @@
 <body>
 
 <div class="container">
-    <!-- 검색창 (이제 아래 리스트가 항상 고정되어 보입니다) -->
+    <!-- 검색창 -->
     <div class="search-box">
         <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 기, 륨, 녘)" autocomplete="off">
     </div>
@@ -175,25 +179,17 @@
         <button class="btn" onclick="saveCustomWords()">단어장 저장하기</button>
     </div>
     
-    <!-- 요청하신 맨 밑 바닥 구역 -->
+    <!-- 하단 구역 (이미지로 교체 완료) -->
     <div class="footer-banner">
-        노무현
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Roh_Moo-hyun_profile.jpg/440px-Roh_Moo-hyun_profile.jpg" alt="노무현 대통령">
     </div>
 </div>
 
 <div id="toast" class="toast">복사되었습니다!</div>
 
 <script>
-    // 기본 레전드 단어장
-    const defaultWords = [
-        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기함", "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", 
-        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "늄바", "늄바니", "임바니", "륨카펫", "륨바", "윰바", "륨제", 
-        "슘페터", "슘가", "튬바", "튬스", "뮴산", "듐바", "륄리", "똠방각하", "똠양꿍", "틋틋", "늣가을", "슭곰", 
-        "슭바람", "닢동전", "녘새바람", "즘생", "즙액", "쯧쯧", "믜리", "늬우스", "닻줄", "돛대", "덫사냥",
-        "산나물", "동동구루무", "염화나트륨", "수산화칼륨", "타륨", "이륨", "카드뮴", "칼슘", "스트론튬", "헤륨", 
-        "해질녘", "동녘", "서녘", "남녘", "북녘", "새녘", "오솔길", "이리듐", "탈륨", "우라늄", "티타늄", "플루토늄", 
-        "헬륨", "바륨", "프랑슘", "라듐", "알루미늄", "개미핥기", "산기슭", "처마기슭", "강기슭"
-    ];
+    // 기본 내장 단어 비움 (직접 추가하는 단어들로 구성)
+    const defaultWords = [];
 
     const initialLaw = {
         '륨': '윰', '늄': '임', '륨': '임', '룡': '용', '린': '인', 
@@ -221,6 +217,10 @@
         localStorage.setItem('myCustomWords', JSON.stringify(customList));
         wordDatabase = [...defaultWords, ...customList];
         showToast("💾 단어장이 성공적으로 업데이트되었습니다!");
+        
+        // 저장 직후 검색결과 즉시 갱신
+        const event = new Event('input');
+        document.getElementById('searchInput').dispatchEvent(event);
     }
 
     const searchInput = document.getElementById('searchInput');
@@ -241,7 +241,6 @@
             return;
         }
 
-        // 두음법칙 연산
         let queries = [query];
         if (initialLaw[query]) queries.push(initialLaw[query]);
         if (reverseInitialLaw[query]) queries.push(reverseInitialLaw[query]);
@@ -250,7 +249,6 @@
         defenseTitle.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
         attackTitle.textContent = `⚔️ 공격용 (${query}로 끝남)`;
 
-        // 방어 필터링
         let defenseWords = [];
         queries.forEach(q => {
             const matches = wordDatabase.filter(item => item.startsWith(q));
@@ -258,10 +256,8 @@
         });
         defenseWords = [...new Set(defenseWords)];
 
-        // 공격 필터링
         const attackWords = wordDatabase.filter(item => item.endsWith(query));
 
-        // 방어용 렌더링
         defenseList.innerHTML = '';
         if (defenseWords.length > 0) {
             defenseWords.forEach(word => {
@@ -271,7 +267,6 @@
             defenseList.innerHTML = '<div class="no-result">결과 없음</div>';
         }
 
-        // 공격용 렌더링
         attackList.innerHTML = '';
         if (attackWords.length > 0) {
             attackWords.forEach(word => {
