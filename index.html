@@ -115,6 +115,10 @@
             font-weight: bold;
         }
         .btn:hover { background: #111; }
+        .btn-clear {
+            background: #555;
+        }
+        .btn-clear:hover { background: #333; }
         .btn-reset {
             flex: 1;
             background: #eb5757;
@@ -184,11 +188,12 @@
         <textarea id="customWordsInput" placeholder="여기에 추가할 단어들을 엔터 치면서 쭉 붙여넣으세요."></textarea>
         <div class="btn-group">
             <button class="btn" onclick="saveCustomWords()">단어장 저장하기</button>
+            <button class="btn btn-clear" onclick="clearInputText()">🧹 입력창 글씨 지우기</button>
             <button class="btn btn-reset" onclick="resetAllWords()">⚠️ 단어장 전체 리셋</button>
         </div>
     </div>
     
-    <!-- 하단 노무현 대통령 이미지 (고화질 링크 고정) -->
+    <!-- 하단 이미지 구역 -->
     <div class="footer-banner">
         <img src="https://images.chosun.com/resizer/pYVj8Vw1vK4P4zVbL8Xk8G_WkY8=/440x0/smart/cloudfront-ap-northeast-1.images.arcpublishing.com/chosun/WGP26NID6VAMVHU4ZULV3NQU6E.jpg" alt="노무현 대통령">
     </div>
@@ -263,6 +268,12 @@
         } catch (e) {
             alert("⚠️ 브라우저 한계 용량을 초과했습니다. 단어를 아주 조금만 줄여주세요.");
         }
+    }
+
+    // 🧹 입력창에 있는 글씨만 완전히 비워주는 기능 (단어장 데이터는 안전)
+    function clearInputText() {
+        document.getElementById('customWordsInput').value = '';
+        showToast("🧹 입력창의 글씨가 모두 지워졌습니다!");
     }
 
     function resetAllWords() {
