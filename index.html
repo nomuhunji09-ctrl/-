@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 초고속 검색기 v3.3 (용량 초압축 버전)</title>
+    <title>끝말잇기 초고속 검색기 v3.5 (용량 무제한 버전)</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -190,7 +190,7 @@
     <div class="admin-section">
         <div class="admin-box" style="border-color: #111;">
             <div class="admin-title" style="color: #111;">🛡️⚔️ 방어용 & 공격용 단어 추가 (통합창)</div>
-            <textarea id="mainInput" placeholder="여기에 대량의 단어를 붙여넣고 저장하세요. (대용량 최적화 완료)"></textarea>
+            <textarea id="mainInput" placeholder="여기에 대량의 단어를 붙여넣고 저장하세요. (대용량 IndexedDB 시스템 탑재)"></textarea>
             <div class="btn-group">
                 <button class="btn" onclick="saveData('main')">단어장 저장하기</button>
                 <button class="btn btn-clear" onclick="clearText('main')">🧹 입력창 지우기</button>
@@ -203,7 +203,7 @@
             <textarea id="killInput" placeholder="죽이는용 목록을 여기에 따로 입력하세요."></textarea>
             <div class="btn-group">
                 <button class="btn" style="background: #8b5cf6;" onclick="saveData('kill')">죽이는용 저장</button>
-                <button class="btn btn-clear" onclick="clearText('kill')">🧹 입력창 지우기</button>
+                <button class="btn btn-clear" onclick="clearText('kill">🧹 입력창 지우기</button>
                 <button class="btn btn-reset" onclick="resetData('kill')">⚠️ 리셋</button>
             </div>
         </div>
@@ -219,73 +219,83 @@
 <script>
     const ADMIN_PASSWORD = "1234";
 
-    // 메모리 고속 검색 맵
+    // 인메모리 고속 검색 구조
     let startMap = {};
     let endMap = {};
     let killMap = {};
 
-    loadAllWords();
+    // IndexedDB 초기화 및 대용량 데이터 로드
+    let db;
+    const request = indexedDB.open("KKUTU_DB", 1);
 
-    function loadAllWords() {
-        // 1. 방어/공격 통합용 가져오기
-        const savedMain = localStorage.getItem('compWords_main');
-        if (savedMain) {
-            // 압축 해제 후 메모리에 바인딩
-            unpackAndBuild(savedMain, 'main');
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains("words")) {
+            db.createObjectStore("words", { keyPath: "id" });
         }
+    };
 
-        // 2. 죽이는용 가져오기
-        const savedKill = localStorage.getItem('compWords_kill');
-        if (savedKill) {
-            unpackAndBuild(savedKill, 'kill');
-        }
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        loadAllWordsFromDB();
+    };
+
+    request.onerror = function(event) {
+        alert("데이터베이스를 열 수 없습니다. 브라우저 설정을 확인해주세요.");
+    };
+
+    function loadAllWordsFromDB() {
+        const transaction = db.transaction(["words"], "readonly");
+        const store = transaction.objectStore("words");
+
+        // 메인 단어장 로드 및 인덱싱
+        const reqMain = store.get("main");
+        reqMain.onsuccess = function() {
+            if (reqMain.result) {
+                document.getElementById('mainInput').value = reqMain.result.text;
+                buildIndex(reqMain.result.text, 'main');
+            }
+        };
+
+        // 죽이는용 단어장 로드 및 인덱싱
+        const reqKill = store.get("kill");
+        reqKill.onsuccess = function() {
+            if (reqKill.result) {
+                document.getElementById('killInput').value = reqKill.result.text;
+                buildIndex(reqKill.result.text, 'kill');
+            }
+        };
     }
 
-    // [용량 초압축 핵심 엔진]
-    // 단어를 통째로 다 들고 있지 않고 글자별 묶음 양식으로 글자 수를 극한으로 다이어트해서 로컬스토리지에 저장합니다.
-    function packWords(rawText, isMain) {
+    function buildIndex(rawText, type) {
         const lines = rawText.split('\n');
-        const tempStart = {};
-        const tempEnd = {};
-
-        for (let i = 0; i < lines.length; i++) {
-            const word = lines[i].trim();
-            if (!word) continue;
-
-            if (isMain) {
+        
+        if (type === 'main') {
+            startMap = {};
+            endMap = {};
+            for (let i = 0; i < lines.length; i++) {
+                const word = lines[i].trim();
+                if (!word) continue;
+                
                 const s = word.charAt(0);
                 const e = word.charAt(word.length - 1);
-                if (!tempStart[s]) tempStart[s] = [];
-                tempStart[s].push(word);
-                if (!tempEnd[e]) tempEnd[e] = [];
-                tempEnd[e].push(word);
-            } else {
+                
+                if (!startMap[s]) startMap[s] = [];
+                startMap[s].push(word);
+                
+                if (!endMap[e]) endMap[e] = [];
+                endMap[e].push(word);
+            }
+        } else if (type === 'kill') {
+            killMap = {};
+            for (let i = 0; i < lines.length; i++) {
+                const word = lines[i].trim();
+                if (!word) continue;
+                
                 const s = word.charAt(0);
-                if (!tempStart[s]) tempStart[s] = [];
-                tempStart[s].push(word);
+                if (!killMap[s]) killMap[s] = [];
+                killMap[s].push(word);
             }
-        }
-
-        // 압축 포맷 오브젝트 변환
-        if (isMain) {
-            return JSON.stringify({ s: tempStart, e: tempEnd });
-        } else {
-            return JSON.stringify({ s: tempStart });
-        }
-    }
-
-    // 로컬스토리지에 들어있던 축소 데이터를 꺼내서 실시간 가동용 인덱스로 전개
-    function unpackAndBuild(packedJson, type) {
-        try {
-            const data = JSON.parse(packedJson);
-            if (type === 'main') {
-                startMap = data.s || {};
-                endMap = data.e || {};
-            } else if (type === 'kill') {
-                killMap = data.s || {};
-            }
-        } catch(e) {
-            console.error("데이터 파싱 실패", e);
         }
     }
 
@@ -297,19 +307,22 @@
         }
 
         const text = document.getElementById(`${type}Input`).value;
-        try {
-            // 입력 텍스트를 압축 구조로 파싱해서 로컬스토리지에 저장 (용량 대폭 절감)
-            const packed = packWords(text, type === 'main');
-            localStorage.setItem(`compWords_${type}`, packed);
-            
-            // 메모리 동기화
-            unpackAndBuild(packed, type);
-            
-            showToast(`💾 대용량 압축 저장이 완료되었습니다!`);
+        
+        // IndexedDB 무제한 저장소에 저장 처리
+        const transaction = db.transaction(["words"], "readwrite");
+        const store = transaction.objectStore("words");
+        
+        const request = store.put({ id: type, text: text });
+        
+        request.onsuccess = function() {
+            buildIndex(text, type);
+            showToast(`💾 [IndexedDB] 대용량 저장 완벽 성공!`);
             triggerSearch();
-        } catch (e) {
-            alert("⚠️ 최적화 압축을 거쳤음에도 브라우저의 한계 용량을 초과했습니다. 단어 개수를 조금만 필터링해서 줄여주세요.");
-        }
+        };
+        
+        request.onerror = function() {
+            alert("❌ 데이터베이스 저장에 실패했습니다.");
+        };
     }
 
     function clearText(type) {
@@ -325,16 +338,21 @@
         }
 
         if (confirm("정말로 이 데이터들을 영구 삭제하시겠습니까?")) {
-            localStorage.removeItem(`compWords_${type}`);
-            document.getElementById(`${type}Input`).value = '';
-            if (type === 'main') {
-                startMap = {};
-                endMap = {};
-            } else if (type === 'kill') {
-                killMap = {};
-            }
-            triggerSearch();
-            showToast("💥 데이터가 리셋되었습니다.");
+            const transaction = db.transaction(["words"], "readwrite");
+            const store = transaction.objectStore("words");
+            const request = store.delete(type);
+            
+            request.onsuccess = function() {
+                document.getElementById(`${type}Input`).value = '';
+                if (type === 'main') {
+                    startMap = {};
+                    endMap = {};
+                } else if (type === 'kill') {
+                    killMap = {};
+                }
+                triggerSearch();
+                showToast("💥 데이터가 완벽히 초기화되었습니다.");
+            };
         }
     }
 
