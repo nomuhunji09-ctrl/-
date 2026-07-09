@@ -2,98 +2,87 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 (두음법칙 내장형)</title>
+    <title>끝말잇기 마스터 (최종 완성형)</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #f4f4f4; }
+        :root { --bg: #0e0e0e; --panel: #1a1a1a; --text: #e0e0e0; --accent: #3b82f6; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Malgun Gothic', sans-serif; padding: 20px; }
         .container { max-width: 1080px; margin: 0 auto; }
-        .search-box { width: 100%; margin-bottom: 20px; }
-        input[type="text"] { width: 100%; padding: 14px; font-size: 18px; box-sizing: border-box; border: 2px solid #111; border-radius: 6px; font-weight: bold; }
-        .result-wrapper { display: flex; gap: 15px; margin-bottom: 20px; }
-        .result-column { flex: 1; background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 10px; min-height: 200px; }
-        .column-title { font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #333; padding-bottom: 5px; }
-        .list-content { max-height: 300px; overflow-y: auto; font-size: 14px; }
-        .item { padding: 5px; border-bottom: 1px solid #eee; }
-        .admin-section { display: flex; gap: 15px; }
-        .admin-box { flex: 1; }
-        textarea { width: 100%; height: 100px; }
+        input, textarea { width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
+        .result-wrapper { display: flex; gap: 15px; margin: 20px 0; }
+        .result-column { flex: 1; background: var(--panel); border: 1px solid #444; padding: 15px; min-height: 250px; }
+        .btn-group { display: flex; gap: 5px; margin-top: 10px; }
+        button { flex: 1; padding: 10px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #555; }
+        .item { padding: 5px; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="검색할 글자를 입력하세요" oninput="performSearch()">
-    </div>
-
+    <input type="text" id="searchInput" placeholder="검색어 입력..." oninput="performSearch()">
+    
     <div class="result-wrapper">
-        <div class="result-column"><div class="column-title">🛡️ 방어/공격</div><div id="mainList" class="list-content"></div></div>
-        <div class="result-column"><div class="column-title">💀 죽이는용</div><div id="killList" class="list-content"></div></div>
+        <div class="result-column"><h3>🛡️ 방어/공격</h3><div id="mainList"></div></div>
+        <div class="result-column"><h3>💀 죽이는용</h3><div id="killList"></div></div>
     </div>
 
-    <div class="admin-section">
-        <div class="admin-box">
+    <div style="display: flex; gap: 20px;">
+        <div style="flex: 1;">
             <textarea id="mainInput" placeholder="방어/공격 단어 입력"></textarea>
-            <button onclick="saveData('main')">저장</button>
+            <div class="btn-group"><button onclick="saveData('main')">저장</button><button onclick="resetData('main')">리셋</button></div>
         </div>
-        <div class="admin-box">
+        <div style="flex: 1;">
             <textarea id="killInput" placeholder="죽이는용 단어 입력"></textarea>
-            <button onclick="saveData('kill')">죽이는용 저장</button>
+            <div class="btn-group"><button onclick="saveData('kill')">저장</button><button onclick="resetData('kill')">리셋</button></div>
         </div>
     </div>
+    <button style="width: 100%; margin-top: 20px; background: #c0392b;" onclick="fullReset()">전체 데이터 초기화</button>
 </div>
 
 <script>
     let db;
-    const request = indexedDB.open("KKUTU_DB", 4); 
-
-    request.onupgradeneeded = e => {
-        db = e.target.result;
-        if (!db.objectStoreNames.contains("words")) db.createObjectStore("words", { keyPath: "id" });
-    };
-
-    request.onsuccess = e => {
-        db = e.target.result;
-        loadAllData();
-    };
+    const request = indexedDB.open("KKUTU_FINAL", 1);
+    request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("words", { keyPath: "id" }); };
+    request.onsuccess = e => { db = e.target.result; loadAll(); };
 
     function saveData(type) {
         const text = document.getElementById(`${type}Input`).value;
-        const tx = db.transaction("words", "readwrite");
-        tx.objectStore("words").put({ id: type, text: text });
-        alert("저장되었습니다!");
+        db.transaction("words", "readwrite").objectStore("words").put({ id: type, text: text });
+        alert("저장 완료!");
     }
 
-    function loadAllData() {
-        const tx = db.transaction("words", "readonly");
-        const store = tx.objectStore("words");
+    function resetData(type) {
+        db.transaction("words", "readwrite").objectStore("words").delete(type);
+        document.getElementById(`${type}Input`).value = '';
+        alert("리셋되었습니다.");
+    }
+
+    function fullReset() {
+        if(confirm("정말로 모든 데이터를 삭제하시겠습니까?")) {
+            indexedDB.deleteDatabase("KKUTU_FINAL");
+            location.reload();
+        }
+    }
+
+    function loadAll() {
+        const store = db.transaction("words").objectStore("words");
         store.get("main").onsuccess = e => { if(e.target.result) document.getElementById('mainInput').value = e.target.result.text; };
         store.get("kill").onsuccess = e => { if(e.target.result) document.getElementById('killInput').value = e.target.result.text; };
     }
 
     function performSearch() {
-        const query = document.getElementById('searchInput').value.trim();
-        if (!query) return;
-
-        // 두음법칙 규칙을 전체 포함한 엔진
-        const law = {
-            '라': '나', '락': '낙', '란': '난', '랄': '날', '람': '남', '랍': '납', '랑': '낭',
-            '래': '내', '량': '양', '렵': '엽', '령': '영', '례': '예', '로': '노', '로': '오',
-            '뢰': '뇌', '료': '요', '룡': '용', '루': '누', '류': '유', '륙': '육', '륜': '윤',
-            '률': '율', '리': '이', '린': '인', '림': '임', '립': '입'
-        };
-
-        let targets = [query];
-        if (law[query]) targets.push(law[query]);
-        // 반대 방향 검색도 추가
-        for (let key in law) { if(law[key] === query) targets.push(key); }
-
-        const mainText = document.getElementById('mainInput').value;
-        const killText = document.getElementById('killInput').value;
-
-        const filter = (text) => text.split('\n').filter(w => targets.some(t => w.startsWith(t)));
-
-        document.getElementById('mainList').innerHTML = filter(mainText).map(w => `<div class="item">${w}</div>`).join('');
-        document.getElementById('killList').innerHTML = filter(killText).map(w => `<div class="item">${w}</div>`).join('');
+        const q = document.getElementById('searchInput').value.trim();
+        if(!q) return;
+        const law = {'라':'나', '락':'낙', '란':'난', '랄':'날', '람':'남', '량':'양', '령':'영', '례':'예', '로':'노', '뢰':'뇌', '료':'요', '룡':'용', '루':'누', '류':'유', '리':'이', '린':'인'};
+        let targets = [q];
+        if(law[q]) targets.push(law[q]);
+        for(let k in law) if(law[k] === q) targets.push(k);
+        
+        const main = document.getElementById('mainInput').value.split('\n');
+        const kill = document.getElementById('killInput').value.split('\n');
+        
+        document.getElementById('mainList').innerHTML = main.filter(w => targets.some(t => w.startsWith(t))).map(w => `<div class="item">${w}</div>`).join('');
+        document.getElementById('killList').innerHTML = kill.filter(w => targets.some(t => w.startsWith(t))).map(w => `<div class="item">${w}</div>`).join('');
     }
 </script>
 </body>
