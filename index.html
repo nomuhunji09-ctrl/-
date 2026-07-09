@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>자동완성 검색기</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .search-box {
+            position: relative;
+            width: 300px;
+            margin: 50px auto 0 auto;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            border: 2px solid #333;
+            border-radius: 4px;
+        }
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #333;
+        }
+        .autocomplete-item:hover {
+            background-color: #f0f0f0;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<div class="search-box">
+    <input type="text" id="searchInput" placeholder="검색어를 입력하세요 (예: 기)" autocomplete="off">
+    <div id="suggestionList" class="autocomplete-list"></div>
+</div>
+
+<div id="toast" class="toast">클립보드에 복사되었습니다!</div>
+
+<script>
+    // 여기에 원하는 단어들을 마음대로 추가하거나 수정하세요!
+    const wordDatabase = [
+        "기뇰", "기차", "기상천외", "기타", "고구마", "곰돌이", "나비", "다람쥐"
+    ];
+
+    const searchInput = document.getElementById('searchInput');
+    const suggestionList = document.getElementById('suggestionList');
+    const toast = document.getElementById('toast');
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value;
+        suggestionList.innerHTML = '';
+
+        if (!query) return;
+
+        const filtered = wordDatabase.filter(item => item.startsWith(query));
+
+        filtered.forEach(word => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.textContent = word;
+
+            div.addEventListener('click', function() {
+                searchInput.value = word;
+                
+                // 클립보드 복사 기능
+                navigator.clipboard.writeText(word).then(() => {
+                    showToast(`"${word}" 복사 완료!`);
+                }).catch(err => {
+                    // 코드펜 미리보기 창 내부 보안 제한 대피용 익스플로잇
+                    const textarea = document.createElement('textarea');
+                    textarea.value = word;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast(`"${word}" 복사 완료!`);
+                });
+
+                suggestionList.innerHTML = '';
+            });
+
+            suggestionList.appendChild(div);
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput) {
+            suggestionList.innerHTML = '';
+        }
+    });
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 1500);
+    }
+</script>
+
+</body>
+</html>
