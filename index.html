@@ -2,25 +2,25 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>자동완성 검색기 Pro</title>
+    <title>자동완성 검색기 Dual Pro (두음법칙 포함)</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
             padding: 20px;
-            background-color: #ffffff; /* 완벽한 하얀 바탕 */
+            background-color: #ffffff;
         }
         .search-box {
             position: relative;
-            width: 300px;
+            width: 320px;
             margin: 50px auto 0 auto;
         }
         input[type="text"] {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             font-size: 16px;
             box-sizing: border-box;
-            border: 2px solid #333;
-            border-radius: 4px;
+            border: 2px solid #111;
+            border-radius: 6px;
         }
         .autocomplete-list {
             position: absolute;
@@ -30,19 +30,38 @@
             background: white;
             border: 1px solid #ccc;
             border-top: none;
-            max-height: 300px; /* 창을 더 시원하게 키움 */
+            max-height: 400px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 10 rgba(0,0,0,0.15);
+            border-radius: 0 0 6px 6px;
         }
+        .section-title {
+            background: #f0f0f0;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+            border-bottom: 1px solid #ddd;
+        }
+        .section-title.defense { color: #2f80ed; background: #e3f2fd; }
+        .section-title.attack { color: #eb5757; background: #fde8e8; }
+        
         .autocomplete-item {
             padding: 10px;
             cursor: pointer;
             font-size: 15px;
             color: #333;
+            border-bottom: 1px solid #f9f9f9;
         }
         .autocomplete-item:hover {
-            background-color: #f0f0f0;
+            background-color: #f5f5f5;
+        }
+        .no-result {
+            padding: 15px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
         }
         .toast {
             position: fixed;
@@ -62,44 +81,61 @@
 <body>
 
 <div class="search-box">
-    <input type="text" id="searchInput" placeholder="검색어를 입력하세요..." autocomplete="off">
+    <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 륨, 늄, 녘)" autocomplete="off">
     <div id="suggestionList" class="autocomplete-list"></div>
 </div>
 
-<div id="toast" class="toast">클립보드에 복사되었습니다!</div>
+<div id="toast" class="toast">복사되었습니다!</div>
 
 <script>
-    // 존나게 어려운 단어 데이터베이스 (100% 즉시 작동 버전)
+    // 두음법칙 변환 매핑 테이블 (끝말잇기용 실전 규칙)
+    const initialLaw = {
+        '륨': '윰', '늄': '임', '륨': '임', '룡': '용', '린': '인', 
+        '림': '임', '립': '입', '량': '양', '려': '여', '례': '예', 
+        '로': '오', '뢰': '외', '루': '우', '류': '유', '라': '아'
+    };
+
+    // 역방향 매핑 테이블 (윰을 쳤을 때 륨도 검색되도록)
+    const reverseInitialLaw = {};
+    for (const [key, value] of Object.entries(initialLaw)) {
+        reverseInitialLaw[value] = key;
+    }
+
     const wordDatabase = [
-        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기고만장", "기적논리", "기이치", "기함", "기강해이", 
-        "뇨", "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", "뇨의", "뇨로결석", "뇨생식기",
-        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "루코사이드", "루이스산", "루테인", "루프탑", "루바브",
-        "늄", "늄바", "늄바니", "륨", "륨카펫", "륨바", "륨제", "륨프",
-        "슘", "슘페터", "슘가", "슘버그", "슘프", 
-        "튬", "튬바", "튬스", "튬레이더", "튬스톤",
-        "뮴", "뮴산", "뮴이온", "뮴염",
-        "듐", "듐바", "듐라", "듐스", "듐페이",
-        "륄", "륄리", "륄케", "륄레",
-        "똠", "똠방", "똠방각하", "똠양꿍", "똠얌",
-        "틋", "틋틋", "틋하다", "틋히",
-        "늣", "늣가을", "늣가래", "늣하다",
-        "븨", "븨별", "븨시", "븨듸", "븨랑",
-        "슭", "슭곰", "슭바람", "슭가녘", "슭무늬",
-        "닢", "닢동전", "닢새", "닢풀", "닢새기",
-        "녘", "녘새바람", "녘바람", "녘녘",
-        "녘", "동녘", "서녘", "남녘", "북녘", "새녘", "아랫녘", "앞녘", "뒷녘", "살녘",
-        "즘", "즘생", "즘게", "즘치", "즘퍼", "즘득하다",
-        "즙", "즙액", "즙재", "즙틀", "즙짜개", "즙포",
-        "쯧", "쯧쯧", "쯧하다", "쯧쯧하다",
-        "믜", "믜리", "믜다", "믜움", "믜리도",
-        "늬", "늬우스", "늬에시", "늬앙스", "늬우치다",
-        "닻", "닻줄", "닻채", "닻돌", "닻별", "닻기어",
-        "돛", "돛대", "돛바늘", "돛자리", "돛실", "돛천",
-        "덫", "덫사냥", "덫치기", "덫줄", "덫구멍",
-        "숯", "숯불", "숯가마", "숯쟁이", "숯댕이", "숯검뎅",
-        "빛", "빛공해", "빛깔", "빛에너지", "빛스펙트럼", "빛바램",
-        "낯", "낯가림", "낯설다", "낯바닥", "낯두껍다", "낯빛",
-        "꽃", "꽃망울", "꽃가루", "꽃무릇", "꽃샘추위", "꽃양배추"
+        // --- [방어용 단어장] ---
+        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기함",
+        "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", "뇨로결석",
+        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "루이스산", "루테인",
+        "늄바", "늄바니", "임바니", "륨카펫", "륨바", "윰바", "륨제", "륨프",
+        "슘페터", "슘가", "슘버그", "슘프", 
+        "튬바", "튬스", "튬레이더", "튬스톤",
+        "뮴산", "뮴이온", "뮴염",
+        "듐바", "듐라", "듐스",
+        "륄리", "륄케", "륄레",
+        "똠방", "똠방각하", "똠양꿍", "똠얌",
+        "틋틋", "틋하다", "틋히",
+        "늣가을", "늣가래", "늣하다",
+        "슭곰", "슭바람", "슭가녘",
+        "닢동전", "닢새", "닢풀",
+        "녘새바람", "녘바람", "녘녘",
+        "즘생", "즘게", "즘치", "즘퍼",
+        "즙액", "즙재", "즙틀", "즙짜개",
+        "쯧쯧", "쯧하다", "쯧쯧하다",
+        "믜리", "믜다", "믜움",
+        "늬우스", "늬에시", "늬앙스",
+        "닻줄", "닻채", "닻돌", "닻별",
+        "돛대", "돛바늘", "돛자리",
+        "덫사냥", "덫치기", "덫줄",
+        "이응", "이안", "인간", "임자",
+        
+        // --- [공격용 단어장] ---
+        "산나물", "동동구루무", "염화나트륨", "수산화칼륨", "타륨", "이륨", "프라세오디뮴", "네오디뮴", 
+        "카드뮴", "칼슘", "스트론튬", "헤륨", "아인슈타늄", "페르뮴", "멘델레븀", "노벨륨", "로렌슘",
+        "수소보륨", "시보륨", "하늄", "마이트너륨", "다름슈타튬", "뢴트게늄", "코페르니슘", "플레로븀",
+        "리버모륨", "오가네손", "과일즙", "포도즙", "양파즙", "해질녘", "동녘", "서녘", "남녘", "북녘", 
+        "새녘", "아랫녘", "앞녘", "뒷녘", "살녘", "오솔길", "이리듐", "탈륨", "우라늄", "티타늄",
+        "플루토늄", "헬륨", "바륨", "프랑슘", "라듐", "악티늄", "프로토악티늄", "네프튜늄", "아메리슘",
+        "퀴륨", "버클륨", "캘리포늄", "코발트늄", "알루미늄", "개미핥기", "산기슭", "처마기슭", "강기슭"
     ];
 
     const searchInput = document.getElementById('searchInput');
@@ -112,46 +148,84 @@
 
         if (!query) return;
 
-        // 입력한 글자로 시작하는 단어들 필터링
-        const filtered = wordDatabase.filter(item => item.startsWith(query));
+        // --- [두음법칙 처리 로직] ---
+        // 입력값에 매핑되는 두음법칙 글자들을 배열로 준비 (예: '륨' 입력 시 ['륨', '윰'] / '윰' 입력 시 ['윰', '륨'])
+        let queries = [query];
+        if (initialLaw[query]) queries.push(initialLaw[query]);
+        if (reverseInitialLaw[query]) queries.push(reverseInitialLaw[query]);
 
-        filtered.forEach(word => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-item';
-            div.textContent = word;
+        // 중복 제거
+        queries = [...new Set(queries)];
 
-            div.addEventListener('click', function() {
-                searchInput.value = word;
-                
-                // 클립보드 복사 기능
-                navigator.clipboard.writeText(word).then(() => {
-                    showToast(`"${word}" 복사 완료!`);
-                }).catch(err => {
-                    // 비상용 백업 복사 기능
-                    const textarea = document.createElement('textarea');
-                    textarea.value = word;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    showToast(`"${word}" 복사 완료!`);
-                });
-
-                suggestionList.innerHTML = '';
-            });
-
-            suggestionList.appendChild(div);
+        // 준비된 글자들로 단어 필터링
+        let defenseWords = [];
+        queries.forEach(q => {
+            const matches = wordDatabase.filter(item => item.startsWith(q));
+            defenseWords = defenseWords.concat(matches);
         });
+        defenseWords = [...new Set(defenseWords)]; // 중복 제거
+
+        // 공격 단어는 끝자리 글자이므로 두음법칙과 상관없이 입력값 그대로 필터링
+        const attackWords = wordDatabase.filter(item => item.endsWith(query));
+
+        if (defenseWords.length === 0 && attackWords.length === 0) {
+            suggestionList.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
+            return;
+        }
+
+        // [방어 섹션 렌더링]
+        if (defenseWords.length > 0) {
+            const title = document.createElement('div');
+            title.className = 'section-title defense';
+            title.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
+            suggestionList.appendChild(title);
+
+            defenseWords.forEach(word => createItem(word));
+        }
+
+        // [공격 섹션 렌더링]
+        if (attackWords.length > 0) {
+            const title = document.createElement('div');
+            title.className = 'section-title attack';
+            title.textContent = `⚔️ 공격용 (${query}로 끝남 - 한방 단어)`;
+            suggestionList.appendChild(title);
+
+            attackWords.forEach(word => createItem(word));
+        }
     });
 
-    // 검색창 바깥을 누르면 목록 닫기
+    function createItem(word) {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.textContent = word;
+
+        div.addEventListener('click', function() {
+            searchInput.value = word;
+            
+            navigator.clipboard.writeText(word).then(() => {
+                showToast(`"${word}" 복사 완료!`);
+            }).catch(err => {
+                const textarea = document.createElement('textarea');
+                textarea.value = word;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast(`"${word}" 복사 완료!`);
+            });
+
+            suggestionList.innerHTML = '';
+        });
+
+        suggestionList.appendChild(div);
+    }
+
     document.addEventListener('click', function(e) {
         if (e.target !== searchInput) {
             suggestionList.innerHTML = '';
         }
     });
 
-    // 토스트 알림창 띄우기
     function showToast(message) {
         toast.textContent = message;
         toast.style.display = 'block';
