@@ -2,70 +2,88 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 v4.1</title>
+    <title>끝말잇기 마스터 v3.6 (강제 초기화 엔진 탑재)</title>
+    <!-- v3.5와 동일한 스타일 유지 -->
     <style>
-        :root { --bg: #0e0e0e; --panel: #1a1a1a; --text: #e0e0e0; --accent: #3b82f6; }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Pretendard', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid #333; padding: 20px; overflow-y: auto; }
-        .grid-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 20px; }
-        .grid-item { padding: 8px; background: #252525; text-align: center; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .grid-item:hover { background: var(--accent); }
-        .main { flex: 1; padding: 30px; display: flex; flex-direction: column; }
-        .search-input { width: 100%; padding: 15px; background: var(--panel); border: 1px solid #333; color: white; border-radius: 8px; font-size: 16px; margin-bottom: 20px; }
-        .result-box { background: var(--panel); border-radius: 8px; padding: 20px; flex: 1; overflow-y: auto; }
-        .result-item { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; }
-        .result-item:hover { background: #333; }
-        textarea { width: 100%; height: 100px; background: #222; color: white; border: 1px solid #444; margin-top: 10px; }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #ffffff; }
+        .container { max-width: 1080px; margin: 30px auto; }
+        .search-box { width: 100%; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 14px; font-size: 18px; box-sizing: border-box; border: 2px solid #111; border-radius: 6px; font-weight: bold; }
+        .result-wrapper { display: flex; gap: 15px; margin-bottom: 40px; min-height: 100px; }
+        .result-column { flex: 1; background: #fff; border: 2px solid #333; border-radius: 6px; overflow: hidden; }
+        .column-title { padding: 10px; font-size: 14px; font-weight: bold; text-align: center; border-bottom: 2px solid #333; }
+        .column-title.defense { color: #fff; background: #2f80ed; }
+        .column-title.attack { color: #fff; background: #eb5757; }
+        .column-title.kill { color: #fff; background: #8b5cf6; }
+        .list-content { max-height: 400px; overflow-y: auto; }
+        .autocomplete-item { padding: 12px 15px; cursor: pointer; font-size: 15px; border-bottom: 1px solid #eee; }
+        .admin-section { display: flex; gap: 15px; margin-top: 40px; }
+        .admin-box { flex: 1; padding: 15px; border: 1px dashed #ccc; background: #fafafa; }
+        textarea { width: 100%; height: 180px; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; }
+        .btn-group { display: flex; gap: 5px; margin-top: 5px; }
+        .btn { flex: 2; padding: 11px; background: #333; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; display: none; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h3>단어 추가하기</h3>
-    <textarea id="mainInput" placeholder="단어들을 엔터로 구분해서 입력"></textarea>
-    <button onclick="saveData()">저장하고 반영하기</button>
-    <div class="grid-container" id="grid"></div>
-</div>
+<div class="container">
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="글자를 입력하세요" autocomplete="off">
+    </div>
 
-<div class="main">
-    <input type="text" id="searchInput" class="search-input" placeholder="검색어를 입력하세요...">
-    <div class="result-box" id="resultList">결과 대기 중...</div>
+    <div class="result-wrapper">
+        <div class="result-column"><div class="column-title defense">🛡️ 방어용</div><div id="defenseList" class="list-content"></div></div>
+        <div class="result-column"><div class="column-title attack">⚔️ 공격용</div><div id="attackList" class="list-content"></div></div>
+        <div class="result-column"><div class="column-title kill">💀 죽이는용</div><div id="killList" class="list-content"></div></div>
+    </div>
+
+    <div class="admin-section">
+        <div class="admin-box">
+            <textarea id="mainInput" placeholder="방어/공격 단어 입력"></textarea>
+            <div class="btn-group"><button class="btn" onclick="saveData('main')">저장</button><button class="btn" onclick="resetData('main')">리셋</button></div>
+        </div>
+        <div class="admin-box">
+            <textarea id="killInput" placeholder="죽이는용 단어 입력"></textarea>
+            <div class="btn-group"><button class="btn" onclick="saveData('kill')">죽이는용 저장</button><button class="btn" onclick="resetData('kill')">리셋</button></div>
+        </div>
+    </div>
 </div>
+<div id="toast" class="toast">완료!</div>
 
 <script>
     let db;
-    let wordList = [];
+    // 버전 2로 올려서 이전 찌꺼기 데이터베이스 강제 삭제 및 재생성
+    const request = indexedDB.open("KKUTU_DB", 2); 
 
-    // DB 설정
-    const request = indexedDB.open("KKUTU_DB_V4", 1);
-    request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("words", { keyPath: "id" }); };
-    request.onsuccess = e => { db = e.target.result; loadData(); };
+    request.onupgradeneeded = function(event) {
+        db = event.target.result;
+        if (db.objectStoreNames.contains("words")) db.deleteObjectStore("words");
+        db.createObjectStore("words", { keyPath: "id" });
+    };
 
-    function saveData() {
-        const text = document.getElementById('mainInput').value;
-        const tx = db.transaction("words", "readwrite");
-        tx.objectStore("words").put({ id: "list", text: text });
-        wordList = text.split('\n');
-        alert("저장 완료!");
+    request.onsuccess = function(event) {
+        db = event.target.result;
+        // 페이지 로드 시 입력창 먼저 비우기
+        document.getElementById('mainInput').value = '';
+        document.getElementById('killInput').value = '';
+    };
+
+    function saveData(type) {
+        const text = document.getElementById(`${type}Input`).value;
+        const transaction = db.transaction(["words"], "readwrite");
+        const store = transaction.objectStore("words");
+        store.put({ id: type, text: text });
+        alert("저장되었습니다!");
     }
 
-    function loadData() {
-        const tx = db.transaction("words", "readonly");
-        tx.objectStore("words").get("list").onsuccess = e => {
-            if(e.target.result) {
-                wordList = e.target.result.text.split('\n');
-                document.getElementById('mainInput').value = e.target.result.text;
-            }
-        };
+    function resetData(type) {
+        const transaction = db.transaction(["words"], "readwrite");
+        const store = transaction.objectStore("words");
+        store.delete(type);
+        document.getElementById(`${type}Input`).value = '';
+        alert("해당 항목이 삭제되었습니다!");
     }
-
-    // 검색 기능
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        const val = e.target.value;
-        const filtered = wordList.filter(w => w.startsWith(val));
-        const listDiv = document.getElementById('resultList');
-        listDiv.innerHTML = filtered.map(w => `<div class="result-item">${w}</div>`).join('');
-    });
 </script>
 </body>
 </html>
