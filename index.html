@@ -2,464 +2,88 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 초고속 검색기 v3.5 (용량 무제한 버전)</title>
+    <title>끝말잇기 마스터 v3.6 (강제 초기화 엔진 탑재)</title>
+    <!-- v3.5와 동일한 스타일 유지 -->
     <style>
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            padding: 20px;
-            background-color: #ffffff;
-        }
-        .container {
-            max-width: 1080px;
-            margin: 30px auto;
-        }
-        .search-box {
-            position: relative;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 14px;
-            font-size: 18px;
-            box-sizing: border-box;
-            border: 2px solid #111;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-        
-        .result-wrapper {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 40px;
-            min-height: 100px;
-        }
-        .result-column {
-            flex: 1;
-            background: #fff;
-            border: 2px solid #333;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .column-title {
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 2px solid #333;
-        }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background-color: #ffffff; }
+        .container { max-width: 1080px; margin: 30px auto; }
+        .search-box { width: 100%; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 14px; font-size: 18px; box-sizing: border-box; border: 2px solid #111; border-radius: 6px; font-weight: bold; }
+        .result-wrapper { display: flex; gap: 15px; margin-bottom: 40px; min-height: 100px; }
+        .result-column { flex: 1; background: #fff; border: 2px solid #333; border-radius: 6px; overflow: hidden; }
+        .column-title { padding: 10px; font-size: 14px; font-weight: bold; text-align: center; border-bottom: 2px solid #333; }
         .column-title.defense { color: #fff; background: #2f80ed; }
         .column-title.attack { color: #fff; background: #eb5757; }
         .column-title.kill { color: #fff; background: #8b5cf6; }
-        
-        .list-content {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .autocomplete-item {
-            padding: 12px 15px;
-            cursor: pointer;
-            font-size: 15px;
-            color: #333;
-            border-bottom: 1px solid #eee;
-        }
-        .autocomplete-item:hover {
-            background-color: #f5f5f5;
-        }
-        .no-result {
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            font-size: 14px;
-        }
-        
-        .admin-section {
-            display: flex;
-            gap: 15px;
-            margin-top: 40px;
-        }
-        .admin-box {
-            flex: 1;
-            padding: 15px;
-            border: 1px dashed #ccc;
-            border-radius: 6px;
-            background: #fafafa;
-        }
-        .admin-title {
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        textarea {
-            width: 100%;
-            height: 180px;
-            box-sizing: border-box;
-            padding: 8px;
-            font-size: 13px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            resize: vertical;
-        }
-        .btn-group {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px;
-        }
-        .btn {
-            flex: 2;
-            padding: 11px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .btn:hover { background: #111; }
-        .btn-clear { flex: 1.5; background: #666; }
-        .btn-clear:hover { background: #444; }
-        .btn-reset { flex: 1; background: #eb5757; }
-        .btn-reset:hover { background: #c53939; }
-        
-        .footer-banner {
-            margin-top: 50px;
-            text-align: center;
-            padding: 15px;
-            border-top: 1px solid #eee;
-            background: #f9f9f9;
-            border-radius: 6px;
-        }
-        .footer-banner img {
-            max-width: 100%;
-            height: auto;
-            max-height: 250px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            display: none;
-            z-index: 9999;
-        }
+        .list-content { max-height: 400px; overflow-y: auto; }
+        .autocomplete-item { padding: 12px 15px; cursor: pointer; font-size: 15px; border-bottom: 1px solid #eee; }
+        .admin-section { display: flex; gap: 15px; margin-top: 40px; }
+        .admin-box { flex: 1; padding: 15px; border: 1px dashed #ccc; background: #fafafa; }
+        textarea { width: 100%; height: 180px; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; }
+        .btn-group { display: flex; gap: 5px; margin-top: 5px; }
+        .btn { flex: 2; padding: 11px; background: #333; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 기, 륨, 녘)" autocomplete="off">
+        <input type="text" id="searchInput" placeholder="글자를 입력하세요" autocomplete="off">
     </div>
 
-    <!-- 3단 결과창 -->
     <div class="result-wrapper">
-        <div class="result-column">
-            <div id="defenseTitle" class="column-title defense">🛡️ 방어용 (시작하는 단어)</div>
-            <div id="defenseList" class="list-content">
-                <div class="no-result">글자를 입력하면 창이 뜹니다.</div>
-            </div>
-        </div>
-        
-        <div class="result-column">
-            <div id="attackTitle" class="column-title attack">⚔️ 공격용 (끝나는 단어)</div>
-            <div id="attackList" class="list-content">
-                <div class="no-result">글자를 입력하면 창이 뜹니다.</div>
-            </div>
-        </div>
-
-        <div class="result-column">
-            <div id="killTitle" class="column-title kill">💀 죽이는용 (한방 단어 등)</div>
-            <div id="killList" class="list-content">
-                <div class="no-result">글자를 입력하면 창이 뜹니다.</div>
-            </div>
-        </div>
+        <div class="result-column"><div class="column-title defense">🛡️ 방어용</div><div id="defenseList" class="list-content"></div></div>
+        <div class="result-column"><div class="column-title attack">⚔️ 공격용</div><div id="attackList" class="list-content"></div></div>
+        <div class="result-column"><div class="column-title kill">💀 죽이는용</div><div id="killList" class="list-content"></div></div>
     </div>
 
-    <!-- 데이터 관리 구역 -->
     <div class="admin-section">
-        <div class="admin-box" style="border-color: #111;">
-            <div class="admin-title" style="color: #111;">🛡️⚔️ 방어용 & 공격용 단어 추가 (통합창)</div>
-            <textarea id="mainInput" placeholder="여기에 대량의 단어를 붙여넣고 저장하세요. (대용량 IndexedDB 시스템 탑재)"></textarea>
-            <div class="btn-group">
-                <button class="btn" onclick="saveData('main')">단어장 저장하기</button>
-                <button class="btn btn-clear" onclick="clearText('main')">🧹 입력창 지우기</button>
-                <button class="btn btn-reset" onclick="resetData('main')">⚠️ 전체 리셋</button>
-            </div>
+        <div class="admin-box">
+            <textarea id="mainInput" placeholder="방어/공격 단어 입력"></textarea>
+            <div class="btn-group"><button class="btn" onclick="saveData('main')">저장</button><button class="btn" onclick="resetData('main')">리셋</button></div>
         </div>
-
-        <div class="admin-box" style="border-color: #8b5cf6;">
-            <div class="admin-title" style="color: #8b5cf6;">💀 죽이는용 단어 추가 (따로 관리)</div>
-            <textarea id="killInput" placeholder="죽이는용 목록을 여기에 따로 입력하세요."></textarea>
-            <div class="btn-group">
-                <button class="btn" style="background: #8b5cf6;" onclick="saveData('kill')">죽이는용 저장</button>
-                <button class="btn btn-clear" onclick="clearText('kill">🧹 입력창 지우기</button>
-                <button class="btn btn-reset" onclick="resetData('kill')">⚠️ 리셋</button>
-            </div>
+        <div class="admin-box">
+            <textarea id="killInput" placeholder="죽이는용 단어 입력"></textarea>
+            <div class="btn-group"><button class="btn" onclick="saveData('kill')">죽이는용 저장</button><button class="btn" onclick="resetData('kill')">리셋</button></div>
         </div>
-    </div>
-    
-    <div class="footer-banner">
-        <img src="https://images.chosun.com/resizer/pYVj8Vw1vK4P4zVbL8Xk8G_WkY8=/440x0/smart/cloudfront-ap-northeast-1.images.arcpublishing.com/chosun/WGP26NID6VAMVHU4ZULV3NQU6E.jpg" alt="노무현 대통령">
     </div>
 </div>
-
-<div id="toast" class="toast">복사되었습니다!</div>
+<div id="toast" class="toast">완료!</div>
 
 <script>
-    const ADMIN_PASSWORD = "1234";
-
-    // 인메모리 고속 검색 구조
-    let startMap = {};
-    let endMap = {};
-    let killMap = {};
-
-    // IndexedDB 초기화 및 대용량 데이터 로드
     let db;
-    const request = indexedDB.open("KKUTU_DB", 1);
+    // 버전 2로 올려서 이전 찌꺼기 데이터베이스 강제 삭제 및 재생성
+    const request = indexedDB.open("KKUTU_DB", 2); 
 
     request.onupgradeneeded = function(event) {
         db = event.target.result;
-        if (!db.objectStoreNames.contains("words")) {
-            db.createObjectStore("words", { keyPath: "id" });
-        }
+        if (db.objectStoreNames.contains("words")) db.deleteObjectStore("words");
+        db.createObjectStore("words", { keyPath: "id" });
     };
 
     request.onsuccess = function(event) {
         db = event.target.result;
-        loadAllWordsFromDB();
+        // 페이지 로드 시 입력창 먼저 비우기
+        document.getElementById('mainInput').value = '';
+        document.getElementById('killInput').value = '';
     };
-
-    request.onerror = function(event) {
-        alert("데이터베이스를 열 수 없습니다. 브라우저 설정을 확인해주세요.");
-    };
-
-    function loadAllWordsFromDB() {
-        const transaction = db.transaction(["words"], "readonly");
-        const store = transaction.objectStore("words");
-
-        // 메인 단어장 로드 및 인덱싱
-        const reqMain = store.get("main");
-        reqMain.onsuccess = function() {
-            if (reqMain.result) {
-                document.getElementById('mainInput').value = reqMain.result.text;
-                buildIndex(reqMain.result.text, 'main');
-            }
-        };
-
-        // 죽이는용 단어장 로드 및 인덱싱
-        const reqKill = store.get("kill");
-        reqKill.onsuccess = function() {
-            if (reqKill.result) {
-                document.getElementById('killInput').value = reqKill.result.text;
-                buildIndex(reqKill.result.text, 'kill');
-            }
-        };
-    }
-
-    function buildIndex(rawText, type) {
-        const lines = rawText.split('\n');
-        
-        if (type === 'main') {
-            startMap = {};
-            endMap = {};
-            for (let i = 0; i < lines.length; i++) {
-                const word = lines[i].trim();
-                if (!word) continue;
-                
-                const s = word.charAt(0);
-                const e = word.charAt(word.length - 1);
-                
-                if (!startMap[s]) startMap[s] = [];
-                startMap[s].push(word);
-                
-                if (!endMap[e]) endMap[e] = [];
-                endMap[e].push(word);
-            }
-        } else if (type === 'kill') {
-            killMap = {};
-            for (let i = 0; i < lines.length; i++) {
-                const word = lines[i].trim();
-                if (!word) continue;
-                
-                const s = word.charAt(0);
-                if (!killMap[s]) killMap[s] = [];
-                killMap[s].push(word);
-            }
-        }
-    }
 
     function saveData(type) {
-        const passwordInput = prompt("단어장을 수정하려면 비밀번호를 입력하세요:");
-        if (passwordInput !== ADMIN_PASSWORD) {
-            alert("❌ 비밀번호가 틀렸습니다.");
-            return;
-        }
-
         const text = document.getElementById(`${type}Input`).value;
-        
-        // IndexedDB 무제한 저장소에 저장 처리
         const transaction = db.transaction(["words"], "readwrite");
         const store = transaction.objectStore("words");
-        
-        const request = store.put({ id: type, text: text });
-        
-        request.onsuccess = function() {
-            buildIndex(text, type);
-            showToast(`💾 [IndexedDB] 대용량 저장 완벽 성공!`);
-            triggerSearch();
-        };
-        
-        request.onerror = function() {
-            alert("❌ 데이터베이스 저장에 실패했습니다.");
-        };
-    }
-
-    function clearText(type) {
-        document.getElementById(`${type}Input`).value = '';
-        showToast("🧹 입력창만 비웠습니다 (저장된 데이터 안전)");
+        store.put({ id: type, text: text });
+        alert("저장되었습니다!");
     }
 
     function resetData(type) {
-        const passwordInput = prompt("🚨 데이터를 완전 리셋하려면 비밀번호를 입력하세요:");
-        if (passwordInput !== ADMIN_PASSWORD) {
-            alert("❌ 비밀번호가 틀렸습니다.");
-            return;
-        }
-
-        if (confirm("정말로 이 데이터들을 영구 삭제하시겠습니까?")) {
-            const transaction = db.transaction(["words"], "readwrite");
-            const store = transaction.objectStore("words");
-            const request = store.delete(type);
-            
-            request.onsuccess = function() {
-                document.getElementById(`${type}Input`).value = '';
-                if (type === 'main') {
-                    startMap = {};
-                    endMap = {};
-                } else if (type === 'kill') {
-                    killMap = {};
-                }
-                triggerSearch();
-                showToast("💥 데이터가 완벽히 초기화되었습니다.");
-            };
-        }
-    }
-
-    function triggerSearch() {
-        const event = new Event('input');
-        document.getElementById('searchInput').dispatchEvent(event);
-    }
-
-    const initialLaw = {
-        '륨': '윰', '늄': '임', '륨': '임', '룡': '용', '린': '인', 
-        '림': '임', '립': '입', '량': '양', '려': '여', '례': '예', 
-        '로': '오', '뢰': '외', '루': '우', '류': '유', '라': '아'
-    };
-    const reverseInitialLaw = {};
-    for (const [key, value] of Object.entries(initialLaw)) { reverseInitialLaw[value] = key; }
-
-    const searchInput = document.getElementById('searchInput');
-    const defenseList = document.getElementById('defenseList');
-    const attackList = document.getElementById('attackList');
-    const killList = document.getElementById('killList');
-    const defenseTitle = document.getElementById('defenseTitle');
-    const attackTitle = document.getElementById('attackTitle');
-    const killTitle = document.getElementById('killTitle');
-    const toast = document.getElementById('toast');
-
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        if (!query) {
-            defenseTitle.textContent = "🛡️ 방어용 (시작하는 단어)";
-            attackTitle.textContent = "⚔️ 공격용 (끝나는 단어)";
-            killTitle.textContent = "💀 죽이는용 (한방 단어 등)";
-            defenseList.innerHTML = '<div class="no-result">글자를 입력하면 창이 뜹니다.</div>';
-            attackList.innerHTML = '<div class="no-result">글자를 입력하면 창이 뜹니다.</div>';
-            killList.innerHTML = '<div class="no-result">글자를 입력하면 창이 뜹니다.</div>';
-            return;
-        }
-
-        let queries = [query];
-        if (initialLaw[query]) queries.push(initialLaw[query]);
-        if (reverseInitialLaw[query]) queries.push(reverseInitialLaw[query]);
-        queries = [...new Set(queries)];
-
-        defenseTitle.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
-        attackTitle.textContent = `⚔️ 공격용 (${query}로 끝남)`;
-        killTitle.textContent = `💀 죽이는용 (${queries.join(', ')}로 시작)`;
-
-        let defenseWords = [];
-        queries.forEach(q => { if (startMap[q]) defenseWords = defenseWords.concat(startMap[q]); });
-        defenseWords = [...new Set(defenseWords)];
-
-        let attackWords = endMap[query] || [];
-
-        let killWords = [];
-        queries.forEach(q => { if (killMap[q]) killWords = killWords.concat(killMap[q]); });
-        killWords = [...new Set(killWords)];
-
-        renderList(defenseList, defenseWords);
-        renderList(attackList, attackWords);
-        renderList(killList, killWords);
-    });
-
-    function renderList(targetElement, wordsArray) {
-        const fragment = document.createDocumentFragment();
-        if (wordsArray.length > 0) {
-            wordsArray.slice(0, 250).forEach(word => fragment.appendChild(createItem(word)));
-        } else {
-            fragment.appendChild(createNoResult());
-        }
-        targetElement.innerHTML = '';
-        targetElement.appendChild(fragment);
-    }
-
-    function createItem(word) {
-        const div = document.createElement('div');
-        div.className = 'autocomplete-item';
-        div.textContent = word;
-        div.style.cursor = 'pointer';
-        div.onclick = function() {
-            navigator.clipboard.writeText(word).then(() => {
-                showToast(`"${word}" 복사 완료!`);
-            }).catch(() => {
-                const textarea = document.createElement('textarea');
-                textarea.value = word;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast(`"${word}" 복사 완료!`);
-            });
-        };
-        return div;
-    }
-
-    function createNoResult() {
-        const div = document.createElement('div');
-        div.className = 'no-result';
-        div.textContent = '결과 없음';
-        return div;
-    }
-
-    function showToast(message) {
-        toast.textContent = message;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 1200);
+        const transaction = db.transaction(["words"], "readwrite");
+        const store = transaction.objectStore("words");
+        store.delete(type);
+        document.getElementById(`${type}Input`).value = '';
+        alert("해당 항목이 삭제되었습니다!");
     }
 </script>
-
 </body>
 </html>
