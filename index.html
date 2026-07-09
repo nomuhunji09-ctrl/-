@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 검색기</title>
+    <title>끝말잇기 마스터 검색기 Dual v2</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -10,58 +10,66 @@
             background-color: #ffffff;
         }
         .container {
-            max-width: 400px;
+            max-width: 700px; /* 양옆으로 넓히기 위해 크기를 키웠습니다 */
             margin: 30px auto;
         }
         .search-box {
             position: relative;
             width: 100%;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
         input[type="text"] {
             width: 100%;
-            padding: 12px;
-            font-size: 16px;
+            padding: 14px;
+            font-size: 18px;
             box-sizing: border-box;
             border: 2px solid #111;
             border-radius: 6px;
+            font-weight: bold;
         }
-        .autocomplete-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ccc;
-            border-top: none;
+        
+        /* [핵심 변형] 양옆으로 갈라지는 레이아웃 */
+        .result-wrapper {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+            min-height: 100px;
+        }
+        .result-column {
+            flex: 1;
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .column-title {
+            padding: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid #333;
+        }
+        .column-title.defense { color: #fff; background: #2f80ed; }
+        .column-title.attack { color: #fff; background: #eb5757; }
+        
+        .list-content {
             max-height: 350px;
             overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            border-radius: 0 0 6px 6px;
         }
-        .section-title {
-            background: #f0f0f0;
-            padding: 6px 10px;
-            font-size: 12px;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
-        }
-        .section-title.defense { color: #2f80ed; background: #e3f2fd; }
-        .section-title.attack { color: #eb5757; background: #fde8e8; }
-        
         .autocomplete-item {
-            padding: 10px;
+            padding: 12px 15px;
             cursor: pointer;
             font-size: 15px;
             color: #333;
-            border-bottom: 1px solid #f9f9f9;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
         }
         .autocomplete-item:hover {
             background-color: #f5f5f5;
         }
         .no-result {
-            padding: 15px;
+            padding: 20px;
             text-align: center;
             color: #999;
             font-size: 14px;
@@ -69,7 +77,7 @@
         
         /* 단어 관리자 구역 */
         .admin-box {
-            margin-top: 50px;
+            margin-top: 40px;
             padding: 15px;
             border: 1px dashed #ccc;
             border-radius: 6px;
@@ -83,7 +91,7 @@
         }
         textarea {
             width: 100%;
-            height: 120px;
+            height: 100px;
             box-sizing: border-box;
             padding: 8px;
             font-size: 13px;
@@ -93,7 +101,7 @@
         }
         .btn {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             background: #333;
             color: white;
             border: none;
@@ -101,8 +109,22 @@
             font-size: 13px;
             cursor: pointer;
             margin-top: 5px;
+            font-weight: bold;
         }
         .btn:hover { background: #111; }
+        
+        /* 맨 밑에 요청하신 요소 추가 */
+        .footer-banner {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #444;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background: #f9f9f9;
+            border-radius: 6px;
+        }
         
         .toast {
             position: fixed;
@@ -122,24 +144,47 @@
 <body>
 
 <div class="container">
-    <!-- 검색창 -->
+    <!-- 검색창 (이제 아래 리스트가 항상 고정되어 보입니다) -->
     <div class="search-box">
-        <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 륨, 녘)" autocomplete="off">
-        <div id="suggestionList" class="autocomplete-list"></div>
+        <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 기, 륨, 녘)" autocomplete="off">
     </div>
 
-    <!-- 존나게 쉬운 단어 추가창 -->
+    <!-- 양옆 분할 결과창 -->
+    <div class="result-wrapper">
+        <!-- 왼쪽: 방어용 -->
+        <div class="result-column">
+            <div id="defenseTitle" class="column-title defense">🛡️ 방어용 (시작하는 단어)</div>
+            <div id="defenseList" class="list-content">
+                <div class="no-result">글자를 입력하면 창이 뜹니다.</div>
+            </div>
+        </div>
+        
+        <!-- 오른쪽: 공격용 -->
+        <div class="result-column">
+            <div id="attackTitle" class="column-title attack">⚔️ 공격용 (끝나는 단어)</div>
+            <div id="attackList" class="list-content">
+                <div class="no-result">글자를 입력하면 창이 뜹니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 단어 추가기 -->
     <div class="admin-box">
         <div class="admin-title">🛠️ 나만의 단어 추가기 (한 줄에 하나씩 엔터)</div>
-        <textarea id="customWordsInput" placeholder="여기에 추가할 단어들을 엔터 치면서 쭉 붙여넣으세요.&#10;예시:&#10;나만의단어1&#10;나만의단어2"></textarea>
+        <textarea id="customWordsInput" placeholder="여기에 추가할 단어들을 엔터 치면서 쭉 붙여넣으세요."></textarea>
         <button class="btn" onclick="saveCustomWords()">단어장 저장하기</button>
+    </div>
+    
+    <!-- 요청하신 맨 밑 바닥 구역 -->
+    <div class="footer-banner">
+        노무현
     </div>
 </div>
 
 <div id="toast" class="toast">복사되었습니다!</div>
 
 <script>
-    // 기본 탑재된 레전드 단어장
+    // 기본 레전드 단어장
     const defaultWords = [
         "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기함", "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", 
         "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "늄바", "늄바니", "임바니", "륨카펫", "륨바", "윰바", "륨제", 
@@ -150,7 +195,6 @@
         "헬륨", "바륨", "프랑슘", "라듐", "알루미늄", "개미핥기", "산기슭", "처마기슭", "강기슭"
     ];
 
-    // 두음법칙 매핑
     const initialLaw = {
         '륨': '윰', '늄': '임', '륨': '임', '룡': '용', '린': '인', 
         '림': '임', '립': '입', '량': '양', '려': '여', '례': '예', 
@@ -159,7 +203,6 @@
     const reverseInitialLaw = {};
     for (const [key, value] of Object.entries(initialLaw)) { reverseInitialLaw[value] = key; }
 
-    // 사이트 켤 때 기존 저장된 내 단어 가져오기
     let wordDatabase = [...defaultWords];
     loadCustomWords();
 
@@ -172,31 +215,42 @@
         }
     }
 
-    // [쉽게하기 핵심] 버튼 누르면 코드 수정 없이 바로 브라우저에 저장됨
     function saveCustomWords() {
         const text = document.getElementById('customWordsInput').value;
         const customList = text.split('\n').map(w => w.trim()).filter(w => w.length > 0);
-        
         localStorage.setItem('myCustomWords', JSON.stringify(customList));
         wordDatabase = [...defaultWords, ...customList];
-        
         showToast("💾 단어장이 성공적으로 업데이트되었습니다!");
     }
 
     const searchInput = document.getElementById('searchInput');
-    const suggestionList = document.getElementById('suggestionList');
+    const defenseList = document.getElementById('defenseList');
+    const attackList = document.getElementById('attackList');
+    const defenseTitle = document.getElementById('defenseTitle');
+    const attackTitle = document.getElementById('attackTitle');
     const toast = document.getElementById('toast');
 
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
-        suggestionList.innerHTML = '';
-        if (!query) return;
+        
+        if (!query) {
+            defenseTitle.textContent = "🛡️ 방어용 (시작하는 단어)";
+            attackTitle.textContent = "⚔️ 공격용 (끝나는 단어)";
+            defenseList.innerHTML = '<div class="no-result">글자를 입력하면 창이 뜹니다.</div>';
+            attackList.innerHTML = '<div class="no-result">글자를 입력하면 창이 뜹니다.</div>';
+            return;
+        }
 
+        // 두음법칙 연산
         let queries = [query];
         if (initialLaw[query]) queries.push(initialLaw[query]);
         if (reverseInitialLaw[query]) queries.push(reverseInitialLaw[query]);
         queries = [...new Set(queries)];
 
+        defenseTitle.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
+        attackTitle.textContent = `⚔️ 공격용 (${query}로 끝남)`;
+
+        // 방어 필터링
         let defenseWords = [];
         queries.forEach(q => {
             const matches = wordDatabase.filter(item => item.startsWith(q));
@@ -204,27 +258,27 @@
         });
         defenseWords = [...new Set(defenseWords)];
 
+        // 공격 필터링
         const attackWords = wordDatabase.filter(item => item.endsWith(query));
 
-        if (defenseWords.length === 0 && attackWords.length === 0) {
-            suggestionList.innerHTML = '<div class="no-result">검색 결과가 없습니다.</div>';
-            return;
-        }
-
+        // 방어용 렌더링
+        defenseList.innerHTML = '';
         if (defenseWords.length > 0) {
-            const title = document.createElement('div');
-            title.className = 'section-title defense';
-            title.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
-            suggestionList.appendChild(title);
-            defenseWords.forEach(word => createItem(word));
+            defenseWords.forEach(word => {
+                defenseList.appendChild(createItem(word));
+            });
+        } else {
+            defenseList.innerHTML = '<div class="no-result">결과 없음</div>';
         }
 
+        // 공격용 렌더링
+        attackList.innerHTML = '';
         if (attackWords.length > 0) {
-            const title = document.createElement('div');
-            title.className = 'section-title attack';
-            title.textContent = `⚔️ 공격용 (${query}로 끝남 - 한방 단어)`;
-            suggestionList.appendChild(title);
-            attackWords.forEach(word => createItem(word));
+            attackWords.forEach(word => {
+                attackList.appendChild(createItem(word));
+            });
+        } else {
+            attackList.innerHTML = '<div class="no-result">결과 없음</div>';
         }
     });
 
@@ -233,7 +287,6 @@
         div.className = 'autocomplete-item';
         div.textContent = word;
         div.addEventListener('click', function() {
-            searchInput.value = word;
             navigator.clipboard.writeText(word).then(() => {
                 showToast(`"${word}" 복사 완료!`);
             }).catch(err => {
@@ -245,14 +298,9 @@
                 document.body.removeChild(textarea);
                 showToast(`"${word}" 복사 완료!`);
             });
-            suggestionList.innerHTML = '';
         });
-        suggestionList.appendChild(div);
+        return div;
     }
-
-    document.addEventListener('click', function(e) {
-        if (e.target !== searchInput) suggestionList.innerHTML = '';
-    });
 
     function showToast(message) {
         toast.textContent = message;
