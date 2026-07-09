@@ -7,7 +7,7 @@
         body {
             font-family: 'Malgun Gothic', sans-serif;
             padding: 20px;
-            background-color: #ffffff; /* 완전히 하얀 바탕 */
+            background-color: #ffffff; /* 완벽한 하얀 바탕 */
         }
         .search-box {
             position: relative;
@@ -30,7 +30,7 @@
             background: white;
             border: 1px solid #ccc;
             border-top: none;
-            max-height: 260px; /* 단어가 많을 때 볼 수 있도록 스크롤 창 크기 확보 */
+            max-height: 300px; /* 창을 더 시원하게 키움 */
             overflow-y: auto;
             z-index: 1000;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -69,36 +69,45 @@
 <div id="toast" class="toast">클립보드에 복사되었습니다!</div>
 
 <script>
-    // words.txt 파일에서 단어를 불러와 저장할 배열
-    let wordDatabase = [];
-
-    // words.txt 파일을 비동기로 읽어오는 함수
-    async function loadWords() {
-        try {
-            // 같은 저장소에 있는 words.txt에 요청
-            const response = await fetch('words.txt');
-            if (!response.ok) throw new Error('파일을 불러오지 못했습니다.');
-            
-            // 텍스트 파일 내용을 읽어옴
-            const data = await response.text();
-            
-            // 엔터를 기준으로 단어를 쪼개고 빈 줄은 제거해서 배열에 저장
-            wordDatabase = data.split(/\r?\n/).map(word => word.trim()).filter(word => word.length > 0);
-            console.log(`${wordDatabase.length}개의 단어가 정상 로드되었습니다.`);
-        } catch (error) {
-            console.error('단어 로딩 실패:', error);
-        }
-    }
-
-    // 페이지가 켜지자마자 단어장 로드
-    loadWords();
+    // 존나게 어려운 단어 데이터베이스 (100% 즉시 작동 버전)
+    const wordDatabase = [
+        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기고만장", "기적논리", "기이치", "기함", "기강해이", 
+        "뇨", "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", "뇨의", "뇨로결석", "뇨생식기",
+        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "루코사이드", "루이스산", "루테인", "루프탑", "루바브",
+        "늄", "늄바", "늄바니", "륨", "륨카펫", "륨바", "륨제", "륨프",
+        "슘", "슘페터", "슘가", "슘버그", "슘프", 
+        "튬", "튬바", "튬스", "튬레이더", "튬스톤",
+        "뮴", "뮴산", "뮴이온", "뮴염",
+        "듐", "듐바", "듐라", "듐스", "듐페이",
+        "륄", "륄리", "륄케", "륄레",
+        "똠", "똠방", "똠방각하", "똠양꿍", "똠얌",
+        "틋", "틋틋", "틋하다", "틋히",
+        "늣", "늣가을", "늣가래", "늣하다",
+        "븨", "븨별", "븨시", "븨듸", "븨랑",
+        "슭", "슭곰", "슭바람", "슭가녘", "슭무늬",
+        "닢", "닢동전", "닢새", "닢풀", "닢새기",
+        "녘", "녘새바람", "녘바람", "녘녘",
+        "녘", "동녘", "서녘", "남녘", "북녘", "새녘", "아랫녘", "앞녘", "뒷녘", "살녘",
+        "즘", "즘생", "즘게", "즘치", "즘퍼", "즘득하다",
+        "즙", "즙액", "즙재", "즙틀", "즙짜개", "즙포",
+        "쯧", "쯧쯧", "쯧하다", "쯧쯧하다",
+        "믜", "믜리", "믜다", "믜움", "믜리도",
+        "늬", "늬우스", "늬에시", "늬앙스", "늬우치다",
+        "닻", "닻줄", "닻채", "닻돌", "닻별", "닻기어",
+        "돛", "돛대", "돛바늘", "돛자리", "돛실", "돛천",
+        "덫", "덫사냥", "덫치기", "덫줄", "덫구멍",
+        "숯", "숯불", "숯가마", "숯쟁이", "숯댕이", "숯검뎅",
+        "빛", "빛공해", "빛깔", "빛에너지", "빛스펙트럼", "빛바램",
+        "낯", "낯가림", "낯설다", "낯바닥", "낯두껍다", "낯빛",
+        "꽃", "꽃망울", "꽃가루", "꽃무릇", "꽃샘추위", "꽃양배추"
+    ];
 
     const searchInput = document.getElementById('searchInput');
     const suggestionList = document.getElementById('suggestionList');
     const toast = document.getElementById('toast');
 
     searchInput.addEventListener('input', function() {
-        const query = this.value;
+        const query = this.value.trim();
         suggestionList.innerHTML = '';
 
         if (!query) return;
