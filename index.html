@@ -2,17 +2,21 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>자동완성 검색기 Dual Pro (두음법칙 포함)</title>
+    <title>끝말잇기 마스터 검색기</title>
     <style>
         body {
             font-family: 'Malgun Gothic', sans-serif;
             padding: 20px;
             background-color: #ffffff;
         }
+        .container {
+            max-width: 400px;
+            margin: 30px auto;
+        }
         .search-box {
             position: relative;
-            width: 320px;
-            margin: 50px auto 0 auto;
+            width: 100%;
+            margin-bottom: 40px;
         }
         input[type="text"] {
             width: 100%;
@@ -30,10 +34,10 @@
             background: white;
             border: 1px solid #ccc;
             border-top: none;
-            max-height: 400px;
+            max-height: 350px;
             overflow-y: auto;
             z-index: 1000;
-            box-shadow: 0 4px 10 rgba(0,0,0,0.15);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             border-radius: 0 0 6px 6px;
         }
         .section-title {
@@ -41,7 +45,6 @@
             padding: 6px 10px;
             font-size: 12px;
             font-weight: bold;
-            color: #555;
             border-bottom: 1px solid #ddd;
         }
         .section-title.defense { color: #2f80ed; background: #e3f2fd; }
@@ -63,6 +66,44 @@
             color: #999;
             font-size: 14px;
         }
+        
+        /* 단어 관리자 구역 */
+        .admin-box {
+            margin-top: 50px;
+            padding: 15px;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .admin-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 120px;
+            box-sizing: border-box;
+            padding: 8px;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .btn {
+            width: 100%;
+            padding: 8px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .btn:hover { background: #111; }
+        
         .toast {
             position: fixed;
             bottom: 20px;
@@ -80,63 +121,67 @@
 </head>
 <body>
 
-<div class="search-box">
-    <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 륨, 늄, 녘)" autocomplete="off">
-    <div id="suggestionList" class="autocomplete-list"></div>
+<div class="container">
+    <!-- 검색창 -->
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="글자를 입력하세요 (예: 륨, 녘)" autocomplete="off">
+        <div id="suggestionList" class="autocomplete-list"></div>
+    </div>
+
+    <!-- 존나게 쉬운 단어 추가창 -->
+    <div class="admin-box">
+        <div class="admin-title">🛠️ 나만의 단어 추가기 (한 줄에 하나씩 엔터)</div>
+        <textarea id="customWordsInput" placeholder="여기에 추가할 단어들을 엔터 치면서 쭉 붙여넣으세요.&#10;예시:&#10;나만의단어1&#10;나만의단어2"></textarea>
+        <button class="btn" onclick="saveCustomWords()">단어장 저장하기</button>
+    </div>
 </div>
 
 <div id="toast" class="toast">복사되었습니다!</div>
 
 <script>
-    // 두음법칙 변환 매핑 테이블 (끝말잇기용 실전 규칙)
+    // 기본 탑재된 레전드 단어장
+    const defaultWords = [
+        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기함", "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", 
+        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "늄바", "늄바니", "임바니", "륨카펫", "륨바", "윰바", "륨제", 
+        "슘페터", "슘가", "튬바", "튬스", "뮴산", "듐바", "륄리", "똠방각하", "똠양꿍", "틋틋", "늣가을", "슭곰", 
+        "슭바람", "닢동전", "녘새바람", "즘생", "즙액", "쯧쯧", "믜리", "늬우스", "닻줄", "돛대", "덫사냥",
+        "산나물", "동동구루무", "염화나트륨", "수산화칼륨", "타륨", "이륨", "카드뮴", "칼슘", "스트론튬", "헤륨", 
+        "해질녘", "동녘", "서녘", "남녘", "북녘", "새녘", "오솔길", "이리듐", "탈륨", "우라늄", "티타늄", "플루토늄", 
+        "헬륨", "바륨", "프랑슘", "라듐", "알루미늄", "개미핥기", "산기슭", "처마기슭", "강기슭"
+    ];
+
+    // 두음법칙 매핑
     const initialLaw = {
         '륨': '윰', '늄': '임', '륨': '임', '룡': '용', '린': '인', 
         '림': '임', '립': '입', '량': '양', '려': '여', '례': '예', 
         '로': '오', '뢰': '외', '루': '우', '류': '유', '라': '아'
     };
-
-    // 역방향 매핑 테이블 (윰을 쳤을 때 륨도 검색되도록)
     const reverseInitialLaw = {};
-    for (const [key, value] of Object.entries(initialLaw)) {
-        reverseInitialLaw[value] = key;
+    for (const [key, value] of Object.entries(initialLaw)) { reverseInitialLaw[value] = key; }
+
+    // 사이트 켤 때 기존 저장된 내 단어 가져오기
+    let wordDatabase = [...defaultWords];
+    loadCustomWords();
+
+    function loadCustomWords() {
+        const saved = localStorage.getItem('myCustomWords');
+        if (saved) {
+            const customList = JSON.parse(saved);
+            wordDatabase = [...defaultWords, ...customList];
+            document.getElementById('customWordsInput').value = customList.join('\n');
+        }
     }
 
-    const wordDatabase = [
-        // --- [방어용 단어장] ---
-        "기뇰", "기상천외", "기하학", "기치창검", "기회주의", "기함",
-        "뇨로", "뇨화", "뇨소", "뇨단백", "뇨붕증", "뇨산", "뇨로결석",
-        "루테늄", "루미놀", "루시퍼", "루게릭", "루마늄", "루이스산", "루테인",
-        "늄바", "늄바니", "임바니", "륨카펫", "륨바", "윰바", "륨제", "륨프",
-        "슘페터", "슘가", "슘버그", "슘프", 
-        "튬바", "튬스", "튬레이더", "튬스톤",
-        "뮴산", "뮴이온", "뮴염",
-        "듐바", "듐라", "듐스",
-        "륄리", "륄케", "륄레",
-        "똠방", "똠방각하", "똠양꿍", "똠얌",
-        "틋틋", "틋하다", "틋히",
-        "늣가을", "늣가래", "늣하다",
-        "슭곰", "슭바람", "슭가녘",
-        "닢동전", "닢새", "닢풀",
-        "녘새바람", "녘바람", "녘녘",
-        "즘생", "즘게", "즘치", "즘퍼",
-        "즙액", "즙재", "즙틀", "즙짜개",
-        "쯧쯧", "쯧하다", "쯧쯧하다",
-        "믜리", "믜다", "믜움",
-        "늬우스", "늬에시", "늬앙스",
-        "닻줄", "닻채", "닻돌", "닻별",
-        "돛대", "돛바늘", "돛자리",
-        "덫사냥", "덫치기", "덫줄",
-        "이응", "이안", "인간", "임자",
+    // [쉽게하기 핵심] 버튼 누르면 코드 수정 없이 바로 브라우저에 저장됨
+    function saveCustomWords() {
+        const text = document.getElementById('customWordsInput').value;
+        const customList = text.split('\n').map(w => w.trim()).filter(w => w.length > 0);
         
-        // --- [공격용 단어장] ---
-        "산나물", "동동구루무", "염화나트륨", "수산화칼륨", "타륨", "이륨", "프라세오디뮴", "네오디뮴", 
-        "카드뮴", "칼슘", "스트론튬", "헤륨", "아인슈타늄", "페르뮴", "멘델레븀", "노벨륨", "로렌슘",
-        "수소보륨", "시보륨", "하늄", "마이트너륨", "다름슈타튬", "뢴트게늄", "코페르니슘", "플레로븀",
-        "리버모륨", "오가네손", "과일즙", "포도즙", "양파즙", "해질녘", "동녘", "서녘", "남녘", "북녘", 
-        "새녘", "아랫녘", "앞녘", "뒷녘", "살녘", "오솔길", "이리듐", "탈륨", "우라늄", "티타늄",
-        "플루토늄", "헬륨", "바륨", "프랑슘", "라듐", "악티늄", "프로토악티늄", "네프튜늄", "아메리슘",
-        "퀴륨", "버클륨", "캘리포늄", "코발트늄", "알루미늄", "개미핥기", "산기슭", "처마기슭", "강기슭"
-    ];
+        localStorage.setItem('myCustomWords', JSON.stringify(customList));
+        wordDatabase = [...defaultWords, ...customList];
+        
+        showToast("💾 단어장이 성공적으로 업데이트되었습니다!");
+    }
 
     const searchInput = document.getElementById('searchInput');
     const suggestionList = document.getElementById('suggestionList');
@@ -145,27 +190,20 @@
     searchInput.addEventListener('input', function() {
         const query = this.value.trim();
         suggestionList.innerHTML = '';
-
         if (!query) return;
 
-        // --- [두음법칙 처리 로직] ---
-        // 입력값에 매핑되는 두음법칙 글자들을 배열로 준비 (예: '륨' 입력 시 ['륨', '윰'] / '윰' 입력 시 ['윰', '륨'])
         let queries = [query];
         if (initialLaw[query]) queries.push(initialLaw[query]);
         if (reverseInitialLaw[query]) queries.push(reverseInitialLaw[query]);
-
-        // 중복 제거
         queries = [...new Set(queries)];
 
-        // 준비된 글자들로 단어 필터링
         let defenseWords = [];
         queries.forEach(q => {
             const matches = wordDatabase.filter(item => item.startsWith(q));
             defenseWords = defenseWords.concat(matches);
         });
-        defenseWords = [...new Set(defenseWords)]; // 중복 제거
+        defenseWords = [...new Set(defenseWords)];
 
-        // 공격 단어는 끝자리 글자이므로 두음법칙과 상관없이 입력값 그대로 필터링
         const attackWords = wordDatabase.filter(item => item.endsWith(query));
 
         if (defenseWords.length === 0 && attackWords.length === 0) {
@@ -173,23 +211,19 @@
             return;
         }
 
-        // [방어 섹션 렌더링]
         if (defenseWords.length > 0) {
             const title = document.createElement('div');
             title.className = 'section-title defense';
             title.textContent = `🛡️ 방어용 (${queries.join(', ')}로 시작)`;
             suggestionList.appendChild(title);
-
             defenseWords.forEach(word => createItem(word));
         }
 
-        // [공격 섹션 렌더링]
         if (attackWords.length > 0) {
             const title = document.createElement('div');
             title.className = 'section-title attack';
             title.textContent = `⚔️ 공격용 (${query}로 끝남 - 한방 단어)`;
             suggestionList.appendChild(title);
-
             attackWords.forEach(word => createItem(word));
         }
     });
@@ -198,10 +232,8 @@
         const div = document.createElement('div');
         div.className = 'autocomplete-item';
         div.textContent = word;
-
         div.addEventListener('click', function() {
             searchInput.value = word;
-            
             navigator.clipboard.writeText(word).then(() => {
                 showToast(`"${word}" 복사 완료!`);
             }).catch(err => {
@@ -213,25 +245,19 @@
                 document.body.removeChild(textarea);
                 showToast(`"${word}" 복사 완료!`);
             });
-
             suggestionList.innerHTML = '';
         });
-
         suggestionList.appendChild(div);
     }
 
     document.addEventListener('click', function(e) {
-        if (e.target !== searchInput) {
-            suggestionList.innerHTML = '';
-        }
+        if (e.target !== searchInput) suggestionList.innerHTML = '';
     });
 
     function showToast(message) {
         toast.textContent = message;
         toast.style.display = 'block';
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 1500);
+        setTimeout(() => { toast.style.display = 'none'; }, 1500);
     }
 </script>
 
