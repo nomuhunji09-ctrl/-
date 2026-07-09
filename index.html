@@ -1,88 +1,76 @@
-이전의 실수를 완전히 수정해서, **[리셋] 버튼을 눌러도 DB 데이터는 그대로 유지되고, 화면의 입력창만 깔끔하게 비워지도록** 코드를 다시 짰어. 이제 **[저장]을 눌러야만 DB에 덮어씌워지니까** 안전해!
-
-아래 코드를 복사해서 HTML 파일에 싹 덮어씌우면 바로 해결이야.
-
-```html
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 (데이터 보존형)</title>
+    <title>끝말잇기 마스터</title>
     <style>
-        :root { --bg: #0e0e0e; --panel: #1a1a1a; --text: #e0e0e0; --accent: #3b82f6; }
-        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 300px; background: var(--panel); border-right: 1px solid #333; padding: 15px; display: flex; flex-direction: column; }
-        .main { flex: 1; padding: 20px; display: flex; flex-direction: column; }
-        .search-input { width: 100%; padding: 12px; background: #252525; border: 1px solid #333; color: white; border-radius: 6px; font-size: 16px; margin-bottom: 15px; }
-        .result-wrapper { display: flex; gap: 15px; flex: 1; overflow: hidden; }
-        .result-column { flex: 1; background: var(--panel); border-radius: 8px; padding: 15px; overflow-y: auto; }
+        /* 기본 배경과 폰트 설정 */
+        body { background-color: #0e0e0e; color: #e0e0e0; font-family: 'Malgun Gothic', sans-serif; margin: 0; display: flex; height: 100vh; }
         
-        .btn-row { display: flex; gap: 5px; margin-bottom: 15px; }
-        button { padding: 6px 12px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; font-size: 12px; }
-        button:hover { background: #555; }
-        .full-reset { background: #802020; margin-top: auto; }
-
-        .item { padding: 6px; border-bottom: 1px solid #333; cursor: pointer; font-size: 13px; }
-        .item:hover { background: #333; color: var(--accent); }
-        textarea { width: 100%; height: 80px; background: #252525; color: white; border: 1px solid #444; margin-bottom: 5px; font-size: 12px; }
+        /* 왼쪽 사이드바 (데이터 입력창) */
+        .sidebar { width: 320px; background: #1a1a1a; border-right: 2px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* 오른쪽 메인 화면 */
+        .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* 입력창 및 버튼 */
+        textarea { width: 100%; height: 120px; background: #252525; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 10px; resize: none; }
+        .btn-group { display: flex; gap: 5px; }
+        button { flex: 1; padding: 8px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
+        
+        /* 검색 및 결과창 */
+        #searchInput { width: 100%; padding: 15px; background: #252525; color: #fff; border: 1px solid #444; border-radius: 8px; font-size: 18px; }
+        .result-container { display: flex; gap: 20px; flex: 1; }
+        .column { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 15px; overflow-y: auto; }
+        
+        /* 결과 아이템 */
+        .item { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; }
+        .item:hover { background: #333; color: #3b82f6; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h3>데이터 관리</h3>
-    <small>방어/공격</small>
-    <textarea id="mainInput"></textarea>
-    <div class="btn-row">
+    <label>방어/공격</label>
+    <textarea id="mainInput" placeholder="단어들을 입력하세요..."></textarea>
+    <div class="btn-group">
         <button onclick="saveData('main')">저장</button>
-        <button onclick="clearInput('main')">리셋</button>
+        <button onclick="document.getElementById('mainInput').value=''">리셋</button>
     </div>
-    <small>죽이는용</small>
-    <textarea id="killInput"></textarea>
-    <div class="btn-row">
+    <label>죽이는용</label>
+    <textarea id="killInput" placeholder="죽이는 단어들을 입력하세요..."></textarea>
+    <div class="btn-group">
         <button onclick="saveData('kill')">저장</button>
-        <button onclick="clearInput('kill')">리셋</button>
+        <button onclick="document.getElementById('killInput').value=''">리셋</button>
     </div>
-    <button class="full-reset" onclick="fullReset()">전체 데이터 초기화</button>
+    <button style="background: #802020; margin-top: 20px;" onclick="fullReset()">전체 초기화</button>
 </div>
 
-<div class="main">
-    <input type="text" id="searchInput" class="search-input" placeholder="검색어 입력..." oninput="performSearch()">
-    <div class="result-wrapper">
-        <div class="result-column"><h3>🛡️ 방어/공격</h3><div id="mainList"></div></div>
-        <div class="result-column"><h3>💀 죽이는용</h3><div id="killList"></div></div>
+<div class="main-content">
+    <input type="text" id="searchInput" placeholder="검색할 글자를 입력하세요..." oninput="performSearch()">
+    <div class="result-container">
+        <div class="column"><h3>🛡️ 방어/공격</h3><div id="mainList"></div></div>
+        <div class="column"><h3>💀 죽이는용</h3><div id="killList"></div></div>
     </div>
 </div>
 
 <script>
-    const PASSWORD = "1234";
     let db;
     const request = indexedDB.open("KKUTU_FINAL_V2", 1);
     request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("words", { keyPath: "id" }); };
     request.onsuccess = e => { db = e.target.result; loadAll(); };
 
-    // 저장 함수
     function saveData(type) {
-        if(prompt("비밀번호:") !== PASSWORD) return alert("틀림");
+        if(prompt("비밀번호 입력:") !== "1234") return alert("틀림");
         const text = document.getElementById(`${type}Input`).value;
         db.transaction("words", "readwrite").objectStore("words").put({ id: type, text: text });
-        alert("저장 완료!");
+        alert("저장됨!");
     }
 
-    // 리셋 함수: DB 삭제 안함! 화면 입력창만 비움
-    function clearInput(type) {
-        if(confirm("입력창의 내용만 비우시겠습니까? (저장된 데이터는 유지됩니다)")) {
-            document.getElementById(`${type}Input`).value = '';
-        }
-    }
-
-    // 전체 초기화
     function fullReset() {
-        if(prompt("비밀번호:") !== PASSWORD) return alert("틀림");
-        if(confirm("진짜로 모든 데이터베이스를 파괴하시겠습니까?")) {
-            indexedDB.deleteDatabase("KKUTU_FINAL_V2");
-            location.reload();
-        }
+        if(prompt("비밀번호 입력:") !== "1234") return;
+        indexedDB.deleteDatabase("KKUTU_FINAL_V2"); location.reload();
     }
 
     function loadAll() {
@@ -110,5 +98,3 @@
 </script>
 </body>
 </html>
-
-```
