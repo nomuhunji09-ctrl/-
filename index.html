@@ -2,72 +2,63 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>끝말잇기 마스터 (최종 완성형)</title>
+    <title>끝말잇기 마스터</title>
     <style>
         :root { --bg: #0e0e0e; --panel: #1a1a1a; --text: #e0e0e0; --accent: #3b82f6; }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Malgun Gothic', sans-serif; padding: 20px; }
-        .container { max-width: 1080px; margin: 0 auto; }
-        input, textarea { width: 100%; padding: 12px; background: #252525; border: 1px solid #444; color: white; border-radius: 4px; box-sizing: border-box; }
-        .result-wrapper { display: flex; gap: 15px; margin: 20px 0; }
-        .result-column { flex: 1; background: var(--panel); border: 1px solid #444; padding: 15px; min-height: 250px; }
-        .btn-group { display: flex; gap: 5px; margin-top: 10px; }
-        button { flex: 1; padding: 10px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
-        button:hover { background: #555; }
-        .item { padding: 5px; border-bottom: 1px solid #333; }
+        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid #333; padding: 20px; overflow-y: auto; }
+        .grid-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 20px; }
+        .grid-item { padding: 10px; background: #252525; text-align: center; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .main { flex: 1; padding: 30px; display: flex; flex-direction: column; }
+        .search-input { width: 100%; padding: 15px; background: var(--panel); border: 1px solid #333; color: white; border-radius: 8px; font-size: 16px; margin-bottom: 20px; }
+        .result-wrapper { display: flex; gap: 15px; flex: 1; }
+        .result-column { flex: 1; background: var(--panel); border-radius: 8px; padding: 20px; overflow-y: auto; }
+        textarea { width: 100%; height: 80px; background: #252525; color: white; border: 1px solid #444; margin-bottom: 10px; }
+        button { padding: 8px 15px; cursor: pointer; background: #333; color: white; border: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <input type="text" id="searchInput" placeholder="검색어 입력..." oninput="performSearch()">
-    
+<div class="sidebar">
+    <h3>데이터 관리</h3>
+    <textarea id="mainInput" placeholder="방어/공격 단어"></textarea>
+    <button onclick="secureAction('save', 'main')">저장</button>
+    <button onclick="secureAction('reset', 'main')">리셋</button>
+    <div class="grid-container" id="grid"></div>
+</div>
+
+<div class="main">
+    <input type="text" id="searchInput" class="search-input" placeholder="검색어 입력..." oninput="performSearch()">
     <div class="result-wrapper">
         <div class="result-column"><h3>🛡️ 방어/공격</h3><div id="mainList"></div></div>
         <div class="result-column"><h3>💀 죽이는용</h3><div id="killList"></div></div>
     </div>
-
-    <div style="display: flex; gap: 20px;">
-        <div style="flex: 1;">
-            <textarea id="mainInput" placeholder="방어/공격 단어 입력"></textarea>
-            <div class="btn-group"><button onclick="saveData('main')">저장</button><button onclick="resetData('main')">리셋</button></div>
-        </div>
-        <div style="flex: 1;">
-            <textarea id="killInput" placeholder="죽이는용 단어 입력"></textarea>
-            <div class="btn-group"><button onclick="saveData('kill')">저장</button><button onclick="resetData('kill')">리셋</button></div>
-        </div>
-    </div>
-    <button style="width: 100%; margin-top: 20px; background: #c0392b;" onclick="fullReset()">전체 데이터 초기화</button>
+    <button onclick="secureAction('fullReset')">전체 초기화</button>
 </div>
 
 <script>
+    const PASSWORD = "1234";
     let db;
-    const request = indexedDB.open("KKUTU_FINAL", 1);
+    const request = indexedDB.open("KKUTU_ORIGINAL", 1);
     request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("words", { keyPath: "id" }); };
     request.onsuccess = e => { db = e.target.result; loadAll(); };
 
-    function saveData(type) {
-        const text = document.getElementById(`${type}Input`).value;
-        db.transaction("words", "readwrite").objectStore("words").put({ id: type, text: text });
-        alert("저장 완료!");
-    }
-
-    function resetData(type) {
-        db.transaction("words", "readwrite").objectStore("words").delete(type);
-        document.getElementById(`${type}Input`).value = '';
-        alert("리셋되었습니다.");
-    }
-
-    function fullReset() {
-        if(confirm("정말로 모든 데이터를 삭제하시겠습니까?")) {
-            indexedDB.deleteDatabase("KKUTU_FINAL");
-            location.reload();
+    function secureAction(action, type) {
+        if(prompt("비밀번호:") !== PASSWORD) return alert("틀림");
+        if(action === 'save') {
+            const text = document.getElementById(`${type}Input`).value;
+            db.transaction("words", "readwrite").objectStore("words").put({ id: type, text: text });
+        } else if(action === 'reset') {
+            db.transaction("words", "readwrite").objectStore("words").delete(type);
+            document.getElementById(`${type}Input`).value = '';
+        } else if(action === 'fullReset') {
+            indexedDB.deleteDatabase("KKUTU_ORIGINAL"); location.reload();
         }
     }
 
     function loadAll() {
         const store = db.transaction("words").objectStore("words");
         store.get("main").onsuccess = e => { if(e.target.result) document.getElementById('mainInput').value = e.target.result.text; };
-        store.get("kill").onsuccess = e => { if(e.target.result) document.getElementById('killInput').value = e.target.result.text; };
     }
 
     function performSearch() {
@@ -79,10 +70,7 @@
         for(let k in law) if(law[k] === q) targets.push(k);
         
         const main = document.getElementById('mainInput').value.split('\n');
-        const kill = document.getElementById('killInput').value.split('\n');
-        
         document.getElementById('mainList').innerHTML = main.filter(w => targets.some(t => w.startsWith(t))).map(w => `<div class="item">${w}</div>`).join('');
-        document.getElementById('killList').innerHTML = kill.filter(w => targets.some(t => w.startsWith(t))).map(w => `<div class="item">${w}</div>`).join('');
     }
 </script>
 </body>
